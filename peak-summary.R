@@ -132,6 +132,17 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, annoDb = "or
                                      TxDb = txdb, 
                                      annoDb = annoDb)
             
+            msprintf("Saving tables...\n\n")
+            peak_anno_table_file <- file.path(output_directory, sprintf("%s_peak_anno.tsv", sampleID))
+            write.table(peakAnno, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_table_file)
+            
+            peak_anno_stats_file <- file.path(output_directory, sprintf("%s_peak_anno_stats.tsv", sampleID))
+            write.table(peakAnno@annoStat, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_stats_file)
+            
+            tss_dist_file <- file.path(output_directory, sprintf("%s_tss_distance.txt", sampleID))
+            cat(as.character(promoter_dist), file = tss_dist_file)
+            
+            
             msprintf("Making Peak Anno pie chart...\n\n")
             anno_piechart_plot_file <- file.path(output_directory, sprintf("%s_anno-piechart.pdf", sampleID))
             sample_title <- paste0("\n\n", sampleID, " Peak Types")
@@ -148,15 +159,7 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, annoDb = "or
             text(x = 0, y = 1, sample_title) # add a title
             dev.off()
             
-            msprintf("Saving table...\n\n")
-            peak_anno_table_file <- file.path(output_directory, sprintf("%s_peak_anno.tsv", sampleID))
-            write.table(peakAnno, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_table_file)
             
-            peak_anno_stats_file <- file.path(output_directory, sprintf("%s_peak_anno_stats.tsv", sampleID))
-            write.table(peakAnno@annoStat, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_stats_file)
-            
-            tss_dist_file <- file.path(output_directory, sprintf("%s_tss_distance.txt", sampleID))
-            cat(as.character(promoter_dist), file = tss_dist_file)
             
             
             
