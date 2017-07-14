@@ -31,7 +31,7 @@ $ ./peak-summary.R example-data/Sample3 --dir
 ```
 
 # Software
-- Developed with R version 3.2.3, with the following packages:
+- Tested with R version 3.2.3 and 3.3.0, with the following packages:
   - `ChIPseeker_1.6.7`
   - `clusterProfiler_2.4.3`
   - `TxDb.Hsapiens.UCSC.hg19.knownGene_3.2.2`
