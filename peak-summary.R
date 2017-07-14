@@ -111,10 +111,16 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, annoDb = "or
         
         msprintf("Input File:\n%s\n\n\nFile will be processed:\n%s\n\n", bed_file, process_file)
         if(isTRUE(as.logical(process_file))){
+            
             sampleID <- get_sampleID(input_file = bed_file, id_dirname = id_dirname)
             output_directory <- get_sample_outdir(parent_outdir = global_parent_outdir, sampleID = sampleID)
             
             msprintf("Sample ID:\n%s\n\n\nOutput directory:\n%s\n\n", sampleID, output_directory)
+            
+            # copy the bed file to the output directory
+            output_bed_file <- file.path(output_directory, sprintf("%s_peaks.bed", sampleID))
+            msprintf("Copying bed file from:\n%s\n\n\nto:\n%s\n\n", bed_file, output_bed_file)
+            file.copy(from = bed_file, to = output_bed_file, overwrite = TRUE)
             
             msprintf("Reading peaks file...\n\n")
             peak <- readPeakFile(bed_file)
@@ -124,7 +130,7 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, annoDb = "or
             peaks_coverage_plot_file <- file.path(output_directory, sprintf("%s_peaks-coverage.pdf", sampleID))
             sample_title <- paste0(sampleID, " ChIP Peaks over Chromosomes")
             pdf(file = peaks_coverage_plot_file)
-            covplot(peak, weightCol="V5", title = sample_title) # title = "ChIP Peaks over Chromosomes"
+            print(covplot(peak, weightCol="V5", title = sample_title)) # title = "ChIP Peaks over Chromosomes"
             dev.off()
             
             msprintf("Getting peak annotations...\n\n")
@@ -147,7 +153,7 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, annoDb = "or
             anno_piechart_plot_file <- file.path(output_directory, sprintf("%s_anno-piechart.pdf", sampleID))
             sample_title <- paste0("\n\n", sampleID, " Peak Types")
             pdf(file = anno_piechart_plot_file, height = 8, width = 8)
-            plotAnnoPie(peakAnno, main = sample_title)
+            print(plotAnnoPie(peakAnno, main = sample_title))
             dev.off()
             
             
@@ -155,7 +161,7 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, annoDb = "or
             upset_plot_file <- file.path(output_directory, sprintf("%s_upsetplot.pdf", sampleID))
             sample_title <- paste0(sampleID, " Peak Overlaps")
             pdf(file = upset_plot_file, width = 9, height = 4.5, onefile = F)
-            upsetplot(peakAnno, vennpie=TRUE) 
+            print(upsetplot(peakAnno, vennpie=TRUE))
             text(x = 0, y = 1, sample_title) # add a title
             dev.off()
             
@@ -195,7 +201,7 @@ input_items <- opt$args
 args <- commandArgs(trailingOnly = F)  
 scriptPath <- normalizePath(dirname(sub("^--file=", "", args[grep("^--file=", args)])))
 save.image(file.path(scriptPath, "loaded_args.Rdata"))
-
+# quit()
 
 
 
