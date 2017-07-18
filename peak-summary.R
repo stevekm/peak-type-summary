@@ -75,7 +75,60 @@ get_sample_outdir <- function(parent_outdir, sampleID, create = TRUE){
     return(output_path)
 }
 
-summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, annoDb = "org.Hs.eg.db") {
+
+
+
+chipseeker_pipeline <- function(bed_file, sampleID, tss_dist, txdb, annoDb = "org.Hs.eg.db"){
+    # the pipeline for ChIPSeeker peak annotations and plots
+    
+    msprintf("Reading peaks file...\n\n")
+    peak <- readPeakFile(bed_file)
+    
+    peaks_coverage_plot_file <- make_filename(input_file = bed_file, new_ext = 'coverage.pdf')
+    msprintf("Making Chrom Coverages plot:\n%s\n\n", peaks_coverage_plot_file)
+    sample_title <- paste0(sampleID, " ChIP Peaks over Chromosomes")
+    pdf(file = peaks_coverage_plot_file)
+    print(covplot(peak, weightCol = "V5", title = sample_title)) # title = "ChIP Peaks over Chromosomes"
+    dev.off()
+    
+    msprintf("Getting peak annotations...\n\n")
+    peakAnno <- annotatePeak(peak, tssRegion = c(-tss_dist, tss_dist), 
+                             TxDb = txdb, 
+                             annoDb = annoDb)
+    
+    peak_anno_table_file <- make_filename(input_file = bed_file, new_ext = 'peak_anno.tsv')
+    msprintf("Saving table:\n%s\n\n", peak_anno_table_file)
+    write.table(peakAnno, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_table_file)
+    
+    peak_anno_stats_file <- make_filename(input_file = bed_file, new_ext = 'peak_anno_stats.tsv')
+    msprintf("Saving table:\n%s\n\n", peak_anno_stats_file)
+    write.table(peakAnno@annoStat, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_stats_file)
+    
+    tss_dist_file <- make_filename(input_file = bed_file, new_ext = 'tss_distance.txt')
+    msprintf("Saving table:\n%s\n\n", tss_dist_file)
+    cat(as.character(tss_dist), file = tss_dist_file)
+    
+    
+    anno_piechart_plot_file <- make_filename(input_file = bed_file, new_ext = 'anno-piechart.pdf')
+    msprintf("Making Peak Anno pie chart:\n%s\n\n", anno_piechart_plot_file)
+    sample_title <- paste0("\n\n", sampleID, " Peak Types")
+    pdf(file = anno_piechart_plot_file, height = 8, width = 8)
+    print(plotAnnoPie(peakAnno, main = sample_title))
+    dev.off()
+    
+    
+    msprintf("Making Upset plot...\n\n")
+    # upset_plot_file <- file.path(output_directory, sprintf("%s_upsetplot.pdf", sampleID))
+    upset_plot_file <- make_filename(input_file = bed_file, new_ext = 'upsetplot.pdf')
+    sample_title <- paste0(sampleID, " Peak Overlaps")
+    pdf(file = upset_plot_file, width = 9, height = 4.5, onefile = F)
+    print(upsetplot(peakAnno, vennpie=TRUE))
+    text(x = 0, y = 1, sample_title) # add a title
+    dev.off()
+}
+
+
+summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE) {
     # run the ChIPSeeker pipeline on all the .bed files
     
     
@@ -105,73 +158,53 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, annoDb = "or
         bed_file <- names(bed_files[i])
         process_file <- bed_files[i] # TRUE or FALSE
         
-        
-        
-        promoter_dist <- tss_dist
+        files_errors <- character()
+        files_warnings <- character()
         
         msprintf("Input File:\n%s\n\n\nFile will be processed:\n%s\n\n", bed_file, process_file)
         if(isTRUE(as.logical(process_file))){
             
             sampleID <- get_sampleID(input_file = bed_file, id_dirname = id_dirname)
-            output_directory <- get_sample_outdir(parent_outdir = global_parent_outdir, sampleID = sampleID)
             
-            msprintf("Sample ID:\n%s\n\n\nOutput directory:\n%s\n\n", sampleID, output_directory)
+            msprintf("Sample ID:\n%s\n\n\n", sampleID)
             
-            # copy the bed file to the output directory
-            output_bed_file <- file.path(output_directory, sprintf("%s_peaks.bed", sampleID))
-            msprintf("Copying bed file from:\n%s\n\n\nto:\n%s\n\n", bed_file, output_bed_file)
-            file.copy(from = bed_file, to = output_bed_file, overwrite = TRUE)
+            result <- tryCatch(
+                {
+                    msprintf("Running ChIPSeeker pipeline for sample %s, file:\n%s\n\n", sampleID, bed_file)
+                    chipseeker_pipeline(bed_file = bed_file, sampleID = sampleID, tss_dist = tss_dist, txdb = txdb)
+                    
+                },
+                error = function(cond) {
+                    msprintf("An error occured while running ChIPSeeker pipeline for sample %s, file:\n%s\n\n", sampleID, bed_file)
+                    message("Original error message:")
+                    message(cond)
+                    return("error")
+                },
+                warning = function(cond) {
+                    msprintf("An warning occured while running ChIPSeeker pipeline for sample %s, file:\n%s\n\n", sampleID, bed_file)
+                    message("Original warning message:")
+                    message(cond)
+                    return("warning")
+                },
+                finally={
+                    msprintf("Finished running ChIPSeeker pipeline for sample %s, file:\n%s\n\n", sampleID, bed_file)
+                }
+            )
             
-            msprintf("Reading peaks file...\n\n")
-            peak <- readPeakFile(bed_file)
-            
-            
-            msprintf("Making Chrom Coverages plot...\n\n")
-            peaks_coverage_plot_file <- file.path(output_directory, sprintf("%s_peaks-coverage.pdf", sampleID))
-            sample_title <- paste0(sampleID, " ChIP Peaks over Chromosomes")
-            pdf(file = peaks_coverage_plot_file)
-            print(covplot(peak, weightCol="V5", title = sample_title)) # title = "ChIP Peaks over Chromosomes"
-            dev.off()
-            
-            msprintf("Getting peak annotations...\n\n")
-            peakAnno <- annotatePeak(peak, tssRegion = c(-promoter_dist, promoter_dist), 
-                                     TxDb = txdb, 
-                                     annoDb = annoDb)
-            
-            msprintf("Saving tables...\n\n")
-            peak_anno_table_file <- file.path(output_directory, sprintf("%s_peak_anno.tsv", sampleID))
-            write.table(peakAnno, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_table_file)
-            
-            peak_anno_stats_file <- file.path(output_directory, sprintf("%s_peak_anno_stats.tsv", sampleID))
-            write.table(peakAnno@annoStat, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_stats_file)
-            
-            tss_dist_file <- file.path(output_directory, sprintf("%s_tss_distance.txt", sampleID))
-            cat(as.character(promoter_dist), file = tss_dist_file)
-            
-            
-            msprintf("Making Peak Anno pie chart...\n\n")
-            anno_piechart_plot_file <- file.path(output_directory, sprintf("%s_anno-piechart.pdf", sampleID))
-            sample_title <- paste0("\n\n", sampleID, " Peak Types")
-            pdf(file = anno_piechart_plot_file, height = 8, width = 8)
-            print(plotAnnoPie(peakAnno, main = sample_title))
-            dev.off()
-            
-            
-            msprintf("Making Upset plot...\n\n")
-            upset_plot_file <- file.path(output_directory, sprintf("%s_upsetplot.pdf", sampleID))
-            sample_title <- paste0(sampleID, " Peak Overlaps")
-            pdf(file = upset_plot_file, width = 9, height = 4.5, onefile = F)
-            print(upsetplot(peakAnno, vennpie=TRUE))
-            text(x = 0, y = 1, sample_title) # add a title
-            dev.off()
-            
-            
-            
-            
-            
+            if(result == "error") files_errors <- c(files_errors, bed_file)
+            if(result == "warning") files_warnings <- c(files_warnings, bed_file)
         }
         msprintf('\n------------------------------\n')
     }
+    
+    msprintf('The following files had errors:\n')
+    msprintf('%s\n', files_errors)
+    
+    msprintf('The following files had warnings:\n')
+    msprintf('%s\n', files_warnings)
+    
+    cat(files_errors, file = "file_errors.txt", append = TRUE)
+    cat(files_warnings, file = "file_warnings.txt", append = TRUE)
 }
 
 
@@ -211,6 +244,9 @@ global_parent_outdir <- getwd()
 if(out_dir != FALSE) global_parent_outdir <- out_dir 
 
 if (isTRUE(dir_mode)) input_items <- find_all_beds(input_items)
+
+msprintf('Input Items are:\n')
+msprintf('%s\n', input_items)
 
 validated_items <- sapply(input_items, validate_file)
 
