@@ -1,0 +1,12 @@
+Feature	Frequency
+Promoter (1-2kb)	4.58
+Promoter (2-3kb)	3.36
+Promoter (<=1kb)	12.76
+5' UTR	0.84
+3' UTR	3.28
+1st Exon	0.5
+Other Exon	5.44
+1st Intron	5.02
+Other Intron	26.96
+Downstream (<=3kb)	1.9
+Distal Intergenic	35.36
