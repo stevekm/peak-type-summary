@@ -24,10 +24,10 @@ Annotate & plot .bed files
 $ ./peak-summary.R example-data/Sample1.bed example-data/Sample2.bed
 ```
 
-Annotate all .bed files in a directory, get sample IDs from the dir name
+Annotate all .bed files in a directory, and save results to a different output directory
 
 ```bash
-$ ./peak-summary.R example-data/Sample3 --dir
+$ ./peak-summary.R example-data/ -d --out-dir example-output
 ```
 
 # Software
