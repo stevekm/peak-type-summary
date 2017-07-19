@@ -3,6 +3,8 @@ ChIPSeeker peaks plotting and summarizing script
 
 R script to run the ChIPSeeker peak annotation and summary plotting pipeline on .bed files. 
 
+__[ Example output can be seen [here](https://github.com/stevekm/peak-type-summary/tree/d443be906c8a6bfc52c336b31761ef7230a64328/example-output/example-data) ]__
+
 # Usage
 
 ```bash
