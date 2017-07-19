@@ -15,12 +15,17 @@ msprintf <- function(fmt, ...) {
 }
 
 
-make_filename <- function (input_file, new_ext) {
+make_filename <- function (input_file, new_ext, out_dir = FALSE) {
     # Convert '/path/to/file.bed' to '/path/to/file_annotations.tsv'
     old_ext <- file_ext(input_file)
     filename_base <- gsub(pattern = sprintf('.%s$', old_ext), replacement = '', x = basename(input_file))
     filename_new <- sprintf('%s.%s', filename_base, new_ext)
-    return(file.path(dirname(input_file), filename_new))
+    new_path <- file.path(dirname(input_file), filename_new)
+    if(out_dir != FALSE){
+        new_path <- file.path(out_dir, new_path)
+        dir.create(path = dirname(new_path), recursive = TRUE, showWarnings = FALSE)
+    }
+    return(new_path)
 }
 
 check_numlines <- function(input_file, min_value = 0) {
@@ -78,13 +83,13 @@ get_sample_outdir <- function(parent_outdir, sampleID, create = TRUE){
 
 
 
-chipseeker_pipeline <- function(bed_file, sampleID, tss_dist, txdb, annoDb = "org.Hs.eg.db"){
+chipseeker_pipeline <- function(bed_file, sampleID, tss_dist, txdb, out_dir = FALSE, annoDb = "org.Hs.eg.db"){
     # the pipeline for ChIPSeeker peak annotations and plots
     
     msprintf("Reading peaks file...\n\n")
     peak <- readPeakFile(bed_file)
     
-    peaks_coverage_plot_file <- make_filename(input_file = bed_file, new_ext = 'coverage.pdf')
+    peaks_coverage_plot_file <- make_filename(input_file = bed_file, new_ext = 'coverage.pdf', out_dir = out_dir)
     msprintf("Making Chrom Coverages plot:\n%s\n\n", peaks_coverage_plot_file)
     sample_title <- paste0(sampleID, " ChIP Peaks over Chromosomes")
     pdf(file = peaks_coverage_plot_file)
@@ -96,20 +101,20 @@ chipseeker_pipeline <- function(bed_file, sampleID, tss_dist, txdb, annoDb = "or
                              TxDb = txdb, 
                              annoDb = annoDb)
     
-    peak_anno_table_file <- make_filename(input_file = bed_file, new_ext = 'peak_anno.tsv')
+    peak_anno_table_file <- make_filename(input_file = bed_file, new_ext = 'peak_anno.tsv', out_dir = out_dir)
     msprintf("Saving table:\n%s\n\n", peak_anno_table_file)
     write.table(peakAnno, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_table_file)
     
-    peak_anno_stats_file <- make_filename(input_file = bed_file, new_ext = 'peak_anno_stats.tsv')
+    peak_anno_stats_file <- make_filename(input_file = bed_file, new_ext = 'peak_anno_stats.tsv', out_dir = out_dir)
     msprintf("Saving table:\n%s\n\n", peak_anno_stats_file)
     write.table(peakAnno@annoStat, quote=FALSE, sep="\t", row.names =FALSE, file=peak_anno_stats_file)
     
-    tss_dist_file <- make_filename(input_file = bed_file, new_ext = 'tss_distance.txt')
+    tss_dist_file <- make_filename(input_file = bed_file, new_ext = 'tss_distance.txt', out_dir = out_dir)
     msprintf("Saving table:\n%s\n\n", tss_dist_file)
     cat(as.character(tss_dist), file = tss_dist_file)
     
     
-    anno_piechart_plot_file <- make_filename(input_file = bed_file, new_ext = 'anno-piechart.pdf')
+    anno_piechart_plot_file <- make_filename(input_file = bed_file, new_ext = 'anno-piechart.pdf', out_dir = out_dir)
     msprintf("Making Peak Anno pie chart:\n%s\n\n", anno_piechart_plot_file)
     sample_title <- paste0("\n\n", sampleID, " Peak Types")
     pdf(file = anno_piechart_plot_file, height = 8, width = 8)
@@ -119,7 +124,7 @@ chipseeker_pipeline <- function(bed_file, sampleID, tss_dist, txdb, annoDb = "or
     
     msprintf("Making Upset plot...\n\n")
     # upset_plot_file <- file.path(output_directory, sprintf("%s_upsetplot.pdf", sampleID))
-    upset_plot_file <- make_filename(input_file = bed_file, new_ext = 'upsetplot.pdf')
+    upset_plot_file <- make_filename(input_file = bed_file, new_ext = 'upsetplot.pdf', out_dir = out_dir)
     sample_title <- paste0(sampleID, " Peak Overlaps")
     pdf(file = upset_plot_file, width = 9, height = 4.5, onefile = F)
     print(upsetplot(peakAnno, vennpie=TRUE))
@@ -128,7 +133,7 @@ chipseeker_pipeline <- function(bed_file, sampleID, tss_dist, txdb, annoDb = "or
 }
 
 
-summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE) {
+summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, out_dir = FALSE) {
     # run the ChIPSeeker pipeline on all the .bed files
     
     
@@ -171,7 +176,7 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE) {
             result <- tryCatch(
                 {
                     msprintf("Running ChIPSeeker pipeline for sample %s, file:\n%s\n\n", sampleID, bed_file)
-                    chipseeker_pipeline(bed_file = bed_file, sampleID = sampleID, tss_dist = tss_dist, txdb = txdb)
+                    chipseeker_pipeline(bed_file = bed_file, sampleID = sampleID, tss_dist = tss_dist, txdb = txdb, out_dir = out_dir)
                     
                 },
                 error = function(cond) {
@@ -212,11 +217,11 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE) {
 # ~~~~~ SCRIPT ARGS ~~~~~ # 
 option_list <- list(
     make_option(c("-d", "--dir"), action="store_true", default=FALSE,
-                dest="dir_mode", help="Directories with peaks to annotate"),
+                dest="dir_mode", help="Treat input items as directories to be searched for .bed files"),
     make_option(c("--id-dirname"), action="store_true", default=FALSE,
-                dest="id_dirname", help="Take the sample ID from the file's dirname, not its basename"),
+                dest="id_dirname", help="Take the sample ID from the .bed file's dirname, not its basename"),
     make_option(c("--out-dir"), type="character", default=FALSE,
-                dest="out_dir", help="Path to the parent output directory. Defaults to the current directory"),
+                dest="out_dir", help="Path to the parent output directory. Will be created and appended to the input item's file path"),
     make_option(c("--tss-dist"), type="numeric", default=3000,
                 dest = "tss_dist", help="TSS distance to use [default %default]",
                 metavar="tss-dist")
@@ -240,9 +245,6 @@ save.image(file.path(scriptPath, "loaded_args.Rdata"))
 
 # ~~~~~ RUN ~~~~~ #
 # default output dir
-global_parent_outdir <- getwd()
-if(out_dir != FALSE) global_parent_outdir <- out_dir 
-
 if (isTRUE(dir_mode)) input_items <- find_all_beds(input_items)
 
 msprintf('Input Items are:\n')
@@ -250,4 +252,4 @@ msprintf('%s\n', input_items)
 
 validated_items <- sapply(input_items, validate_file)
 
-summarize_beds(bed_files = validated_items, tss_dist = tss_dist, id_dirname = id_dirname)
+summarize_beds(bed_files = validated_items, tss_dist = tss_dist, id_dirname = id_dirname, out_dir = out_dir)
