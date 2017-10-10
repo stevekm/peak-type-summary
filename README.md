@@ -3,10 +3,22 @@ ChIPSeeker peaks plotting and summarizing script
 
 R script to run the ChIPSeeker peak annotation and summary plotting pipeline on .bed files. 
 
+__[ Example output files can be seen [here](https://github.com/stevekm/peak-type-summary/tree/d443be906c8a6bfc52c336b31761ef7230a64328/example-output/example-data) ]__
+
+
+
 # Usage
+
+To run the basic script on selected files:
 
 ```bash
 ./peak-summary.R /path/to/Sample1_peaks.bed /path/to/Sample2_peaks.bed 
+```
+
+To compile a report on a directory of files:
+
+```bash
+./compile-peak-type-summary-report.R -d example-data
 ```
 
 ## Options
@@ -24,10 +36,10 @@ Annotate & plot .bed files
 $ ./peak-summary.R example-data/Sample1.bed example-data/Sample2.bed
 ```
 
-Annotate all .bed files in a directory, get sample IDs from the dir name
+Annotate all .bed files in a directory, and save results to a different output directory
 
 ```bash
-$ ./peak-summary.R example-data/Sample3 --dir
+$ ./peak-summary.R example-data/ -d --out-dir example-output
 ```
 
 # Software

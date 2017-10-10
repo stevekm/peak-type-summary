@@ -1,0 +1,118 @@
+---
+title: "Peak Type Summary Report"
+author: "`r system('whoami', intern = TRUE)`"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    keep_md: true
+    df_print: paged
+params:
+   input_dir: "/path/to/peaks_dir"
+   input_items: NA
+   plot_height: 8
+   plot_width: 8
+   dir_mode: FALSE
+   id_dirname: FALSE
+   out_dir: FALSE
+   tss_dist: 3000
+   is_report: TRUE
+
+---
+
+```{r setup, include=FALSE}
+# ~~~~~ PARAMS ~~~~~ # 
+plot_height <- params$plot_height
+plot_width <- params$plot_width
+input_dir <- params$input_dir
+input_items <- params$input_items
+dir_mode <- params$dir_mode
+id_dirname <- params$id_dirname
+out_dir <- params$out_dir
+tss_dist <- params$tss_dist
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, fig.width = plot_width, fig.height = plot_height)
+
+# external file with functions
+source("peak-summary-tools.R")
+
+# set 'is_report' after loading tools
+is_report <- params$is_report
+
+# ~~~~~ FUNCTIONS ~~~~~ # 
+```
+
+```{r run, message=FALSE, echo=FALSE, results=FALSE}
+# ~~~~~ RUN ~~~~~ #
+# get input items; either files were passed or dirs were passed
+if (isTRUE(dir_mode)) input_items <- find_all_beds(input_items)
+
+# tsprintf('Input Items are:\n')
+# tsprintf('%s\n', input_items)
+
+validated_items <- sapply(input_items, validate_file)
+
+# tsprintf('%s', validated_items)
+
+if(file.exists(".Rdata")){
+    # load(".Rdata")
+    summary_output_list <- summarize_beds(bed_files = validated_items, tss_dist = tss_dist, id_dirname = id_dirname, out_dir = out_dir)
+    save.image()
+} else {
+    summary_output_list <- summarize_beds(bed_files = validated_items, tss_dist = tss_dist, id_dirname = id_dirname, out_dir = out_dir)
+    save.image()
+}
+
+```
+
+```{r print_report, results='asis', message=FALSE}
+for(i in seq_along(summary_output_list)){
+    sampleID <- names(summary_output_list[i])
+    summary_output <- summary_output_list[[i]]
+    
+    # names(summary_output)
+    # [1] "pipeline_output" "bed_file"        "process_file"   
+    
+    # names(summary_output[["pipeline_output"]])
+    # [1] "plots"    "peakAnno" "annoStat" "tss_dist"
+    
+    # names(summary_output[["pipeline_output"]][["plots"]])
+    # [1] "covplot"     "plotAnnoPie"
+    
+    # start Markdown section
+    mycat(sprintf('# %s \n\n', sampleID))
+    
+    # path to bed file
+    mycat(sprintf("Bed file: %s\n\n", summary_output[["bed_file"]]))
+    
+    mycat(sprintf("TSS distance: %s\n\n", summary_output[["pipeline_output"]][["tss_dist"]]))
+    
+    # print plots
+    print(summary_output[["pipeline_output"]][["plots"]][["covplot"]])
+    mycat("\n\n")
+    
+    ## need to run the function for this plot to print again for some reason...
+    plotAnnoPie(summary_output[["pipeline_output"]][["peakAnno"]], main = summary_output[["pipeline_output"]][["plots"]][["plotAnnoPie_sample_title"]])
+    mycat("\n\n")
+    
+    
+    # the upset plot printint is busted need to figure it out later; 
+    #     
+    #     Error in gridPLT() : Figure region too small and/or viewport too large
+    # Calls: <Anonymous> ... upsetplot -> upsetplot -> upsetplot.csAnno -> par -> gridPLT
+    # print(summary_output[["plots"]][["upsetplot"]])
+    # summary_output[["plots"]][["upsetplot"]] <- arrangeGrob(upsetplot(summary_output[["pipeline_output"]][["peakAnno"]], vennpie=TRUE))
+    # # print(summary_output[["plots"]][["upsetplot"]])
+    # grid.draw(x = summary_output[["plots"]][["upsetplot"]])
+    # text(x = 0, y = 1, summary_output[["plots"]][["upsetplot_sample_title"]]) # add a title
+    # grid.show.layout(gl, vp=viewport(width=1.25, height=1.25))
+    # upsetplot(summary_output[["pipeline_output"]][["peakAnno"]], vennpie=TRUE, vp = viewport(width=1.25, height=1.25))
+    # class(upsetplot(summary_output[["pipeline_output"]][["peakAnno"]], vennpie=TRUE))
+    
+}
+```
+
+# Session Info
+
+```{r sysinfo}
+sysinfo()
+```
