@@ -153,6 +153,7 @@ summarize_beds <- function(bed_files, tss_dist, id_dirname = FALSE, out_dir = FA
     suppressPackageStartupMessages(library("clusterProfiler"))
     suppressPackageStartupMessages(library("TxDb.Hsapiens.UCSC.hg19.knownGene"))
     txdb <- get("TxDb.Hsapiens.UCSC.hg19.knownGene")
+    # save(txdb, file = "TxDb.Hsapiens.UCSC.hg19.knownGene.Rdata")
     
     
     # ~~~~~ RUN ~~~~~ # 

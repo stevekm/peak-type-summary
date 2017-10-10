@@ -1,0 +1,10 @@
+report_log*
+*.RData
+example-data/*
+file_errors.txt
+file_warnings.txt
+TxDb.Hsapiens.UCSC.hg19.knownGene.Rdata
+loaded_args.Rdata
+peak-type-summary-report.html
+peak-type-summary-report.md
+peak-type-summary-report_files/*
