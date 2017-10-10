@@ -5,7 +5,7 @@ R script to run the ChIPSeeker peak annotation and summary plotting pipeline on 
 
 __[ Example output files can be seen [here](https://github.com/stevekm/peak-type-summary/tree/d443be906c8a6bfc52c336b31761ef7230a64328/example-output/example-data) ]__
 
-
+__[ Example report output can be seen [here](https://cdn.rawgit.com/stevekm/peak-type-summary/7285ef4bba3622b1f7edd02161e3b8ee8d895a75/peak-type-summary-report.html)]__
 
 # Usage
 
